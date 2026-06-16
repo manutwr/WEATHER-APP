@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkyFlow // Weather App</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            --card-bg: rgba(255, 255, 255, 0.06);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: #94a3b8;
+            --accent-color: #38bdf8;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { min-height: 100vh; display: flex; justify-content: center; align-items: center; background: var(--bg-gradient); color: var(--text-primary); padding: 20px; }
+        
+        .app-container { 
+            width: 100%; 
+            max-width: 450px; 
+            background: rgba(30, 41, 59, 0.4); 
+            backdrop-filter: blur(20px); 
+            -webkit-backdrop-filter: blur(20px); 
+            border: 1px solid var(--card-border); 
+            border-radius: 30px; 
+            padding: 30px; 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); 
+        }
+        
+        .search-box { width: 100%; display: flex; align-items: center; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 6px 12px; margin-bottom: 25px; }
+        .search-box input { width: 100%; background: transparent; border: none; outline: none; color: var(--text-primary); font-size: 1rem; padding: 10px; }
+        .search-box button, .target-icon { background: transparent; border: none; color: var(--accent-color); font-size: 1.2rem; cursor: pointer; padding: 10px; }
+        
+        .weather-dashboard { display: block; }
+        .weather-main { text-align: center; margin-bottom: 30px; }
+        .weather-main h2 { font-size: 1.8rem; font-weight: 600; }
+        .weather-main p { color: var(--text-secondary); font-size: 0.9rem; }
+        .weather-visual { display: flex; justify-content: center; align-items: center; margin: 15px 0; }
+        .weather-visual img { width: 90px; height: 90px; filter: drop-shadow(0 8px 12px rgba(56, 189, 248, 0.3)); }
+        .weather-visual h1 { font-size: 3.5rem; font-weight: 700; margin-left: 10px; }
+        .weather-main h3 { font-size: 1.2rem; color: var(--accent-color); text-transform: capitalize; }
+        
+        .weather-details { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        .detail-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 15px; display: flex; align-items: center; gap: 12px; }
+        .icon-wrapper { width: 40px; height: 40px; border-radius: 12px; background: rgba(56, 189, 248, 0.15); display: flex; justify-content: center; align-items: center; color: var(--accent-color); }
+        .info span { display: block; font-size: 0.75rem; color: var(--text-secondary); }
+        .info h4 { font-size: 0.95rem; font-weight: 600; }
+        
+        .error-box { display: none; text-align: center; margin-top: 10px; margin-bottom: 15px;}
+        .error-box p { color: #ef4444; font-weight: 500; font-size: 0.95rem; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <div class="search-box">
+            <i class="fa-solid fa-location-dot target-icon"></i>
+            <input type="text" id="city-input" placeholder="Enter city (e.g. Delhi)..." value="Delhi">
+            <button id="search-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
+        </div>
+
+        <div class="error-box" id="error-box">
+            <p id="error-message">Oops! Something went wrong.</p>
+        </div>
+
+        <div class="weather-dashboard" id="weather-dashboard">
+            <div class="weather-main">
+                <h2 id="location">Delhi, India</h2>
+                <p id="date">--</p>
+                <div class="weather-visual">
+                    <img src="https://cdn.weatherapi.com/weather/64x64/day/113.png" id="weather-icon" alt="Weather">
+                    <h1 id="temperature">--°C</h1>
+                </div>
+                <h3 id="description">Loading...</h3>
+            </div>
+
+            <div class="weather-details">
+                <div class="detail-card">
+                    <div class="icon-wrapper"><i class="fa-solid fa-temperature-half"></i></div>
+                    <div class="info"><span>Feels Like</span><h4 id="feels-like">--°C</h4></div>
+                </div>
+                <div class="detail-card">
+                    <div class="icon-wrapper"><i class="fa-solid fa-droplet"></i></div>
+                    <div class="info"><span>Humidity</span><h4 id="humidity">--%</h4></div>
+                </div>
+                <div class="detail-card">
+                    <div class="icon-wrapper"><i class="fa-solid fa-wind"></i></div>
+                    <div class="info"><span>Wind</span><h4 id="wind-speed">-- km/h</h4></div>
+                </div>
+                <div class="detail-card">
+                    <div class="icon-wrapper"><i class="fa-solid fa-gauge"></i></div>
+                    <div class="info"><span>Pressure</span><h4 id="pressure">-- hPa</h4></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API KEY LIYE PEHLE SE INTEGRATED HAI
+        const apiKey = '284d5bb9e0254c19a0b64201261606'; 
+
+        function initApp() {
+            const cityInput = document.getElementById('city-input');
+            const searchBtn = document.getElementById('search-btn');
+            const dashboard = document.getElementById('weather-dashboard');
+            const errorBox = document.getElementById('error-box');
+            const errorMsg = document.getElementById('error-message');
+
+            async function getWeatherData(city) {
+                if (!city.trim()) return;
+
+                const apiUrl = `https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${encodeURIComponent(city)}&aqi=no`;
+
+                try {
+                    const response = await fetch(apiUrl);
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        if (data.error && (data.error.code === 2006 || data.error.code === 1002)) {
+                            showError("API Key invalid ya activate nahi hui hai.");
+                        } else {
+                            showError("City nahi mili! Sahi naam dalein.");
+                        }
+                        return;
+                    }
+
+                    // Success UI Updates
+                    errorBox.style.display = 'none';
+                    dashboard.style.opacity = '1';
+
+                    document.getElementById('location').textContent = `${data.location.name}, ${data.location.country}`;
+                    document.getElementById('temperature').textContent = `${Math.round(data.current.temp_c)}°C`;
+                    document.getElementById('description').textContent = data.current.condition.text;
+                    document.getElementById('feels-like').textContent = `${Math.round(data.current.feelslike_c)}°C`;
+                    document.getElementById('humidity').textContent = `${data.current.humidity}%`;
+                    document.getElementById('wind-speed').textContent = `${data.current.wind_kph} km/h`; 
+                    document.getElementById('pressure').textContent = `${data.current.pressure_mb} hPa`;
+
+                    document.getElementById('weather-icon').src = `https:${data.current.condition.icon}`;
+                    
+                    const options = { weekday: 'long', day: 'numeric', month: 'short' };
+                    document.getElementById('date').textContent = new Date().toLocaleDateString('en-US', options);
+
+                } catch (error) {
+                    console.error(error);
+                    showError("Network Error! Please try again.");
+                }
+            }
+
+            function showError(msg) {
+                errorBox.style.display = 'block';
+                errorMsg.textContent = msg;
+            }
+
+            searchBtn.addEventListener('click', () => getWeatherData(cityInput.value));
+            cityInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') getWeatherData(cityInput.value);
+            });
+
+            // Startup call
+            getWeatherData('Delhi');
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+    </script>
+</body>
+</html>
